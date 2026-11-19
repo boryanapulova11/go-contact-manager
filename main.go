@@ -2,123 +2,67 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"sort"
 )
 
-type entry struct {
-	name  string
-	phone string
-}
-
-type HashTable struct {
-	buckets [][]entry
-}
-
-func NewHashTable(size int) *HashTable {
-	return &HashTable{buckets: make([][]entry, size)}
-}
-
-func (h *HashTable) hash(name string) int {
-	sum := 0
-	for i := 0; i < len(name); i++ {
-		sum += int(name[i])
+func printContacts(phoneBook map[string]string) {
+	names := make([]string, 0, len(phoneBook))
+	for name := range phoneBook {
+		names = append(names, name)
 	}
-	return sum % len(h.buckets)
-}
+	sort.Strings(names)
 
-func (h *HashTable) Put(name, phone string) {
-	i := h.hash(name)
-
-	for j := range h.buckets[i] {
-		if h.buckets[i][j].name == name {
-			h.buckets[i][j].phone = phone
-			return
-		}
+	for _, name := range names {
+		fmt.Printf("  %-6s -> %s\n", name, phoneBook[name])
 	}
 
-	h.buckets[i] = append(h.buckets[i], entry{name, phone})
+	fmt.Println("  total contacts:", len(phoneBook))
 }
 
-func (h *HashTable) Get(name string) (string, bool) {
-	i := h.hash(name)
-
-	for _, e := range h.buckets[i] {
-		if e.name == name {
-			return e.phone, true
-		}
+func lookup(phoneBook map[string]string, name string) {
+	if phone, ok := phoneBook[name]; ok {
+		fmt.Printf("  %-6s -> %s\n", name, phone)
+	} else {
+		fmt.Printf("  %-6s -> not found\n", name)
 	}
-
-	return "", false
-}
-
-func (h *HashTable) Print() {
-	for i, bucket := range h.buckets {
-		parts := make([]string, 0, len(bucket))
-		for _, e := range bucket {
-			parts = append(parts, e.name+": "+e.phone)
-		}
-
-		if len(parts) == 0 {
-			fmt.Printf("  slot %d: (empty)\n", i)
-		} else {
-			fmt.Printf("  slot %d: %s\n", i, strings.Join(parts, "  ->  "))
-		}
-	}
-}
-
-func explainHash(name string, size int) {
-	codes := make([]string, 0, len(name))
-	sum := 0
-	for i := 0; i < len(name); i++ {
-		codes = append(codes, fmt.Sprintf("%d", name[i]))
-		sum += int(name[i])
-	}
-
-	fmt.Printf("  %-6s %s = %d, %d %% %d = slot %d\n",
-		name+":", strings.Join(codes, "+"), sum, sum, size, sum%size)
 }
 
 func main() {
-	const size = 7
+	phoneBook := make(map[string]string)
 
-	contacts := []entry{
-		{"Alice", "555-1234"},
-		{"Bob", "555-5678"},
-		{"Carol", "555-8765"},
-	}
+	phoneBook["Alice"] = "555-1234"
+	phoneBook["Bob"] = "555-5678"
+	phoneBook["Carol"] = "555-8765"
 
-	table := NewHashTable(size)
-
-	fmt.Println("Hash function: sum of the character codes of the name % table size")
-	for _, c := range contacts {
-		explainHash(c.name, size)
-		table.Put(c.name, c.phone)
-	}
-
-	fmt.Println()
-	fmt.Println("Hash table with", size, "slots:")
-	table.Print()
+	fmt.Println("All contacts:")
+	printContacts(phoneBook)
 
 	fmt.Println()
 	fmt.Println("Lookups:")
 	for _, name := range []string{"Alice", "Bob", "Carol", "Dave"} {
-		if phone, ok := table.Get(name); ok {
-			fmt.Printf("  %-6s -> %s\n", name, phone)
-		} else {
-			fmt.Printf("  %-6s -> not found\n", name)
-		}
+		lookup(phoneBook, name)
 	}
 
 	fmt.Println()
-	fmt.Println("Collision: Alice and Bob both land in slot 2.")
-	fmt.Println("The table uses separate chaining: each slot holds a list of entries,")
-	fmt.Println("and a lookup compares the names in that list to find the right one.")
+	fmt.Println("Update Bob's number:")
+	phoneBook["Bob"] = "555-0000"
+	lookup(phoneBook, "Bob")
 
 	fmt.Println()
-	fmt.Println("The same with Go's built-in map (a hash table):")
-	phoneBook := map[string]string{}
-	for _, c := range contacts {
-		phoneBook[c.name] = c.phone
+	fmt.Println("Delete Carol:")
+	delete(phoneBook, "Carol")
+	lookup(phoneBook, "Carol")
+
+	fmt.Println()
+	fmt.Println("All contacts after the changes:")
+	printContacts(phoneBook)
+
+	fmt.Println()
+	fmt.Println("Map literal:")
+	team := map[string]string{
+		"Alice": "555-1234",
+		"Bob":   "555-5678",
+		"Carol": "555-8765",
 	}
-	fmt.Println("  phoneBook[\"Bob\"] =", phoneBook["Bob"])
+	printContacts(team)
 }
